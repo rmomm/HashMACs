@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <random>
+#include <unordered_map>
 
 #include <cryptopp/ripemd.h>
 #include <cryptopp/hex.h>
@@ -77,6 +78,28 @@ int findRandom(const string& msg, string& foundMsg) {
         }
     }
 }
+
+
+int findBirthday(const string& msg, string& msg1, string& msg2, string& colHash) {
+    unordered_map<string, string> hashes;
+
+    for (int i = 1; ; i++) {
+        string test = msg + to_string(i);
+        string hash = getHash(test).substr(0, 8);
+
+        if (hashes.count(hash)) {
+            msg1 = hashes[hash];
+            msg2 = test;
+            colHash = hash;
+
+            return i;
+        }
+
+        hashes[hash] = test;
+    }
+}
+
+
 int main() {
     ifstream inputFile("input.txt");
 
@@ -86,25 +109,24 @@ int main() {
 
     inputFile.close();
 
-    string result = getHash(msg);
+    string hash = getHash(msg);
 
     string bHash = getHash(bMsg);
     string bTr = bHash.substr(0, 8);
 
-    string tr = result.substr(0, 4);
+    string tr = hash.substr(0, 4);
     int num = findPreimage(msg);
-
-    string foundMsg = msg + to_string(num);
-    string foundHash = getHash(foundMsg);
-    string foundTruncated = foundHash.substr(0, 4);
 
     string randomMsg;
     int randomCounter = findRandom(msg, randomMsg);
 
+    string msg1, msg2, colHash;
+    int birthdayCounter = findBirthday(bMsg, msg1, msg2, colHash);
+
     ofstream outputFile("results.txt");
 
     outputFile << "Message: " << msg << endl;
-    outputFile << "RIPEMD-320: " << result << endl;
+    outputFile << "RIPEMD-320: " << hash << endl;
     outputFile << "16-bit hash: " << tr << endl;
 
     outputFile << endl;
@@ -124,6 +146,14 @@ int main() {
 
     outputFile << "Random preimage attack:" << endl;
     outputFile << "Attempts: " << randomCounter << endl;
+
+    outputFile << endl;
+
+    outputFile << "Sequential birthday attack:" << endl;
+    outputFile << "Message 1: " << msg1 << endl;
+    outputFile << "Message 2: " << msg2 << endl;
+    outputFile << "32-bit hash: " << colHash << endl;
+    outputFile << "Attempts: " << birthdayCounter << endl;
 
     outputFile.close();
 
