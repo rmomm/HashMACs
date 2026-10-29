@@ -79,6 +79,25 @@ int findRandom(const string& msg, string& foundMsg) {
     }
 }
 
+string randomBirthdayMsg(const string& msg) {
+    static random_device rd;
+    static mt19937 gen(rd());
+
+    const string symbols =
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789";
+
+    string result = msg + "_";
+
+    uniform_int_distribution<int> symbolDist(0, symbols.size() - 1);
+
+    for (int i = 0; i < 10; i++) {
+        result += symbols[symbolDist(gen)];
+    }
+
+    return result;
+}
 
 int findBirthday(const string& msg, string& msg1, string& msg2, string& colHash) {
     unordered_map<string, string> hashes;
@@ -96,6 +115,36 @@ int findBirthday(const string& msg, string& msg1, string& msg2, string& colHash)
         }
 
         hashes[hash] = test;
+    }
+}
+
+int findRandomBirthday(const string& msg, string& msg1, string& msg2, string& colHash) {
+    unordered_map<string, string> hashes;
+
+    int counter = 0;
+
+    while (true) {
+        counter++;
+
+        string curMsg = randomBirthdayMsg(msg);
+        string hash = getHash(curMsg).substr(0, 8);
+
+        if (hashes.count(hash)) {
+            if (hashes[hash] != curMsg) {
+                msg1 = hashes[hash];
+                msg2 = curMsg;
+                colHash = hash;
+
+                return counter;
+            }
+        }
+        else {
+            hashes[hash] = curMsg;
+        }
+
+        if (counter % 10000 == 0) {
+            cout << "Random birthday attack: " << counter << " attempts." << endl;
+        }
     }
 }
 
@@ -122,6 +171,9 @@ int main() {
 
     string msg1, msg2, colHash;
     int birthdayCounter = findBirthday(bMsg, msg1, msg2, colHash);
+
+    string rMsg1, rMsg2, rColHash;
+    int randomBirthdayCounter = findRandomBirthday(bMsg, rMsg1, rMsg2, rColHash);
 
     ofstream outputFile("results.txt");
 
@@ -154,6 +206,13 @@ int main() {
     outputFile << "Message 2: " << msg2 << endl;
     outputFile << "32-bit hash: " << colHash << endl;
     outputFile << "Attempts: " << birthdayCounter << endl;
+
+    outputFile << endl;
+    outputFile << "Random birthday attack:" << endl;
+    outputFile << "Message 1: " << rMsg1 << endl;
+    outputFile << "Message 2: " << rMsg2 << endl;
+    outputFile << "32-bit hash: " << rColHash << endl;
+    outputFile << "Attempts: " << randomBirthdayCounter << endl;
 
     outputFile.close();
 
