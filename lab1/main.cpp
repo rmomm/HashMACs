@@ -3,6 +3,7 @@
 #include <fstream>
 #include <random>
 #include <unordered_map>
+#include <vector>
 
 #include <cryptopp/ripemd.h>
 #include <cryptopp/hex.h>
@@ -22,14 +23,47 @@ string getHash(const string& msg) {
     return result;
 }
 
-int findPreimage(const string& msg) {
-    string target = getHash(msg).substr(0, 4);
+string get16BitHash(const string& hash) {
+    return hash.substr(hash.size() - 4);
+}
+
+string get32BitHash(const string& hash) {
+    return hash.substr(hash.size() - 8);
+}
+
+
+int findPreimage(const string& msg, ofstream& outputFile) {
+    string target = get16BitHash(getHash(msg));
 
     for (int i = 1; ; i++) {
         string test = msg + to_string(i);
         string hash = getHash(test);
 
-        if (hash.substr(0, 4) == target) {
+        if (i <= 30) {
+            outputFile << i << ": " << test << endl;
+            outputFile << "Hash: " << hash << endl;
+        }
+
+        if (get16BitHash(hash) == target) {
+            if (i > 30) {
+                outputFile << "..." << endl;
+                outputFile << i << ": " << test << endl;
+                outputFile << "Hash: " << hash << endl;
+            }
+
+            return i;
+        }
+    }
+}
+
+int findPreimageAttempts(const string& msg) {
+    string target = get16BitHash(getHash(msg));
+
+    for (int i = 1; ; i++) {
+        string test = msg + to_string(i);
+        string hash = getHash(test);
+
+        if (get16BitHash(hash) == target) {
             return i;
         }
     }
@@ -57,7 +91,7 @@ string randomMod(const string& msg) {
 }
 
 int findRandom(const string& msg, string& foundMsg) {
-    string target = getHash(msg).substr(0, 4);
+    string target = get16BitHash(getHash(msg));
 
     int counter = 0;
     string curMsg = msg;
@@ -68,7 +102,7 @@ int findRandom(const string& msg, string& foundMsg) {
         curMsg = randomMod(curMsg);
         string hash = getHash(curMsg);
 
-        if (hash.substr(0, 4) == target) {
+        if (get16BitHash(hash) == target) {
             foundMsg = curMsg;
             return counter;
         }
@@ -79,7 +113,7 @@ int findRandom(const string& msg, string& foundMsg) {
     }
 }
 
-string randomBirthdayMsg(const string& msg) {
+string randomMsg(const string& msg) {
     static random_device rd;
     static mt19937 gen(rd());
 
@@ -104,7 +138,7 @@ int findBirthday(const string& msg, string& msg1, string& msg2, string& colHash)
 
     for (int i = 1; ; i++) {
         string test = msg + to_string(i);
-        string hash = getHash(test).substr(0, 8);
+        string hash = get32BitHash(getHash(test));
 
         if (hashes.count(hash)) {
             msg1 = hashes[hash];
@@ -126,8 +160,8 @@ int findRandomBirthday(const string& msg, string& msg1, string& msg2, string& co
     while (true) {
         counter++;
 
-        string curMsg = randomBirthdayMsg(msg);
-        string hash = getHash(curMsg).substr(0, 8);
+        string curMsg = randomMsg(msg);
+        string hash = get32BitHash(getHash(curMsg));
 
         if (hashes.count(hash)) {
             if (hashes[hash] != curMsg) {
@@ -148,7 +182,6 @@ int findRandomBirthday(const string& msg, string& msg1, string& msg2, string& co
     }
 }
 
-
 int main() {
     ifstream inputFile("input.txt");
 
@@ -161,10 +194,15 @@ int main() {
     string hash = getHash(msg);
 
     string bHash = getHash(bMsg);
-    string bTr = bHash.substr(0, 8);
+    string bTr = get32BitHash(bHash);
 
-    string tr = hash.substr(0, 4);
-    int num = findPreimage(msg);
+    string tr = get16BitHash(hash);
+
+    ofstream preimageFile("pr.txt");
+
+    int num = findPreimage(msg, preimageFile);
+
+    preimageFile.close();;
 
     string randomMsg;
     int randomCounter = findRandom(msg, randomMsg);
